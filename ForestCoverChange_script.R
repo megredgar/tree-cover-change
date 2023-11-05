@@ -51,11 +51,11 @@ urls <- c(
    "https://lulctimeseries.blob.core.windows.net/lulctimeseriesv003/lc2022/12U_20220101-20230101.tif",
   "https://lulctimeseries.blob.core.windows.net/lulctimeseriesv003/lc2022/12V_20220101-20230101.tif",
   "https://lulctimeseries.blob.core.windows.net/lulctimeseriesv003/lc2022/13V_20220101-20230101.tif",
- "https://lulctimeseries.blob.core.windows.net/lulctimeseriesv003/lc2018/13U_20180101-20190101.tif"
+ "https://lulctimeseries.blob.core.windows.net/lulctimeseriesv003/lc2018/13U_20180101-20190101.tif",
+  "https://lulctimeseries.blob.core.windows.net/lulctimeseriesv003/lc2018/14U_20180101-20190101.tif",
+  "https://lulctimeseries.blob.core.windows.net/lulctimeseriesv003/lc2022/14U_20220101-20230101.tif"
  
 )
-
-
 
 for (url in urls) {
   download.file(
@@ -77,8 +77,40 @@ raster_files <- list.files(
 # 5. Zonal statistics
 #-------------------------
 
+ras <- lapply(raster_files, terra::rast)
+
+ras_tree <- lapply(
+  ras,
+  function(x) {
+    terra::ifel(
+      x != 2,
+      NA,
+      x
+    )
+  }
+)
+
+lapply(
+  ras_tree,
+  function(x) {
+    terra::writeRaster(
+      x,
+      filename = paste0(
+        x, "_trees", ".gif"
+      ),
+      overwrite = T
+    )
+  }
+)
+
+raster_trees <- list.files(
+  path = getwd(),
+  pattern = "_trees",
+  full.names = T
+)
+
 dd <- list()
-for (raster in raster_files) {
+for (raster in raster_trees) {
   dd[[raster]] <- {
     rasters <- terra::rast(raster)
     lc <- exactextractr::exact_extract(
@@ -91,7 +123,8 @@ for (raster in raster_files) {
           ) %>%
           dplyr::summarize(
             area_km2 = sum(
-              coverage_area[value == 2] / 1e6
+              coverage_area[value == 2] / 1e6,
+              na.rm = T
             )
           )
       },
